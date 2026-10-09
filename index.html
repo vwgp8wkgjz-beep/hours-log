@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hours</title>
+<meta name="theme-color" content="#F4F5F2">
+<link rel="manifest" href="manifest.webmanifest" data-app>
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" data-app>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" data-app>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--SNAPSHOT-->
+<style>
+  :root {
+    --paper: #F4F5F2;
+    --sheet: #FFFFFF;
+    --ink: #1B2130;
+    --muted: #6A707C;
+    --rule: #DCDFD8;
+    --stamp: #4636B0;
+    --stamp-soft: #E9E6F7;
+    --error: #B42318;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 16px/1.5 "Hanken Grotesk", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+
+  .page { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .who { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .who h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .name {
+    border: 0; background: transparent; padding: 2px 0; width: 14ch;
+    font-size: 22px; font-weight: 400; color: var(--muted);
+    border-bottom: 1px dashed transparent;
+  }
+  .name:hover, .name:focus { border-bottom-color: var(--rule); outline: none; }
+  .name::placeholder { color: #A3A8B0; }
+  .actions { display: flex; gap: 8px; }
+  .btn {
+    border: 1px solid var(--rule); background: var(--sheet); border-radius: 8px;
+    padding: 9px 16px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .btn:hover { border-color: #B9BDB4; }
+  .btn.primary { background: var(--stamp); border-color: var(--stamp); color: #fff; }
+  .btn.primary:hover { background: #3A2C98; }
+
+  .readonly-note { margin: 20px 0 0; color: var(--muted); font-size: 15px; }
+
+  /* Week */
+  .week { margin-top: 48px; }
+  .week-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .week-nav { display: flex; align-items: center; gap: 4px; }
+  .arrow {
+    width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent;
+    font-size: 26px; line-height: 1; cursor: pointer; color: var(--ink);
+  }
+  .arrow:hover { background: #E7E9E3; color: var(--ink); }
+  .range { margin: 0 8px; font-size: 28px; font-weight: 600; letter-spacing: -0.015em; }
+  .today-link {
+    border: 0; background: none; padding: 0; margin-left: 8px; cursor: pointer;
+    color: var(--stamp); font-weight: 600; font-size: 15px;
+  }
+  .total { text-align: right; }
+  .total strong {
+    display: block; font-size: 56px; line-height: 1; font-weight: 700;
+    letter-spacing: -0.03em; color: var(--stamp);
+  }
+  .total span { color: var(--muted); font-size: 14px; }
+
+  /* The time card: seven day slots */
+  .card {
+    margin-top: 24px; display: grid; grid-template-columns: repeat(7, 1fr);
+    background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden;
+  }
+  .day { position: relative; padding: 16px 14px 20px; border-left: 1px solid var(--rule); }
+  .day:first-child { border-left: 0; }
+  .day.weekend { background: #FAFBF9; }
+  .day.is-today::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--stamp);
+  }
+  .day-label { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); }
+  .day-label b { color: var(--ink); font-weight: 600; }
+  .is-today .day-label b { color: var(--stamp); }
+  .hours {
+    display: block; width: 100%; margin-top: 18px; padding: 0;
+    border: 0; background: transparent;
+    font-size: 40px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .hours::placeholder { color: #D0D3CC; }
+  .hours:focus { outline: none; }
+  .hours.bad { color: var(--error); }
+  .day:focus-within { background: #FBFAFF; }
+  .meter { height: 4px; margin-top: 10px; background: #EEF0EB; border-radius: 2px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--stamp); transition: width 0.25s ease; }
+  .note {
+    display: block; width: 100%; margin-top: 12px; padding: 4px 0;
+    border: 0; border-bottom: 1px solid transparent; background: transparent;
+    font-size: 14px; line-height: 1.35; color: var(--ink); resize: none; overflow: hidden;
+  }
+  .note::placeholder { color: #B3B7BE; }
+  .note:hover, .note:focus { border-bottom-color: var(--rule); outline: none; }
+  .hint { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+
+  /* All weeks */
+  .history { margin-top: 64px; }
+  .history h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+  .history ol { list-style: none; margin: 0; padding: 0; }
+  .row {
+    display: grid; grid-template-columns: 1fr auto 110px; align-items: center; gap: 24px;
+    width: 100%; padding: 14px 4px; border: 0; border-top: 1px solid var(--rule);
+    background: transparent; text-align: left; cursor: pointer;
+  }
+  .row:hover { background: #ECEEE8; }
+  .row.current .row-range { color: var(--stamp); font-weight: 600; }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+  .bars i { width: 8px; background: #C9C3EC; border-radius: 1px; min-height: 2px; }
+  .row-total { text-align: right; font-weight: 600; }
+  .grand { display: flex; justify-content: space-between; padding: 14px 4px; border-top: 2px solid var(--ink); font-weight: 700; }
+  .empty { margin: 8px 0 0; color: var(--muted); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 15px; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 760px) {
+    .page { padding-top: 24px; }
+    .week { margin-top: 32px; }
+    .week-head { flex-direction: column; align-items: flex-start; }
+    .total { text-align: left; }
+    .range { font-size: 22px; margin: 0 4px; }
+    .card { grid-template-columns: 1fr; }
+    .day { display: grid; grid-template-columns: 92px 72px 1fr; align-items: center; gap: 12px;
+           border-left: 0; border-top: 1px solid var(--rule); padding: 12px 16px; }
+    .day:first-child { border-top: 0; }
+    .day-label { flex-direction: column; }
+    .hours { margin: 0; font-size: 28px; }
+    .meter { display: none; }
+    .note { margin: 0; }
+    .row { grid-template-columns: 1fr auto; }
+    .bars { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media print {
+    body { background: #fff; }
+    .actions, .arrow, .today-link, .hint, .toast { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div class="who">
+      <h1>Hours</h1>
+      <input class="name" id="name" placeholder="Your name" aria-label="Your name" autocomplete="name">
+    </div>
+    <div class="actions">
+      <button class="btn" id="share" type="button">Save shareable copy</button>
+      <button class="btn primary" id="export" type="button">Export to Excel</button>
+    </div>
+  </header>
+  <p class="readonly-note" id="readonly-note" hidden></p>
+
+  <section class="week" aria-label="Week">
+    <div class="week-head">
+      <div class="week-nav">
+        <button class="arrow" id="prev" type="button" aria-label="Previous week">&#8249;</button>
+        <h2 class="range" id="range"></h2>
+        <button class="arrow" id="next" type="button" aria-label="Next week">&#8250;</button>
+        <button class="today-link" id="today" type="button" hidden>This week</button>
+      </div>
+      <div class="total"><strong id="week-total">0</strong><span>hours this week</span></div>
+    </div>
+    <div class="card" id="card"></div>
+    <p class="hint" id="hint">Type hours like 7.5 or 7:30. Everything saves as you type.</p>
+  </section>
+
+  <section class="history" aria-label="All weeks">
+    <h2>All weeks</h2>
+    <ol id="weeks"></ol>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// Grab the page source before anything renders, so "Save shareable copy" can rebuild it.
+const PAGE_SOURCE = '<!doctype html>\n' + document.documentElement.outerHTML;
+
+const STORE_KEY = 'hours-log-v1';
+const WEEK_STARTS_MONDAY = true;
+const FULL_DAY = 8; // hours that fill a day's bar
+
+const snapshot = window.HOURS_SNAPSHOT || null;
+const readOnly = !!snapshot;
+let data = snapshot ? snapshot.data : load();
+// data = { name: "", days: { "2026-10-09": { hours: 7.5, note: "" } } }
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (d && d.days) return d;
+  } catch (e) {}
+  return { name: '', days: {} };
+}
+function save() {
+  if (!readOnly) localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+// ---------- Dates (all local, keyed as YYYY-MM-DD) ----------
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const pad = n => String(n).padStart(2, '0');
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+function weekStart(d) {
+  const offset = WEEK_STARTS_MONDAY ? (d.getDay() + 6) % 7 : d.getDay();
+  return addDays(d, -offset);
+}
+function rangeLabel(start, withYear) {
+  const end = addDays(start, 6);
+  const a = `${MONTHS[start.getMonth()]} ${start.getDate()}`;
+  const b = start.getMonth() === end.getMonth() ? `${end.getDate()}` : `${MONTHS[end.getMonth()]} ${end.getDate()}`;
+  return `${a} to ${b}` + (withYear ? `, ${end.getFullYear()}` : '');
+}
+const fmtHours = h => (Math.round(h * 100) / 100).toString();
+
+// "7.5", "7,5", "7:30", "7h30", "7h" -> 7.5. Empty -> 0. Garbage -> null.
+function parseHours(text) {
+  const t = text.trim().toLowerCase().replace(',', '.');
+  if (!t) return 0;
+  let m = t.match(/^(\d{1,2})\s*[:h]\s*(\d{1,2})?\s*m?$/);
+  if (m) {
+    const mins = Number(m[2] || 0);
+    return mins < 60 ? Number(m[1]) + mins / 60 : null;
+  }
+  if (/^\d*\.?\d+$/.test(t)) {
+    const n = Number(t);
+    return n <= 24 ? Math.round(n * 100) / 100 : null;
+  }
+  return null;
+}
+
+function weeksWithData() {
+  const totals = new Map();
+  for (const [k, v] of Object.entries(data.days)) {
+    if (!v.hours && !v.note) continue;
+    const ws = keyOf(weekStart(fromKey(k)));
+    totals.set(ws, (totals.get(ws) || 0) + (v.hours || 0));
+  }
+  return [...totals.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+}
+
+// ---------- Rendering ----------
+const $ = id => document.getElementById(id);
+const todayKey = keyOf(new Date());
+let shown = weekStart(new Date());
+if (readOnly) {
+  const latest = weeksWithData()[0];
+  if (latest) shown = fromKey(latest[0]);
+}
+
+function renderWeek() {
+  $('range').textContent = rangeLabel(shown, shown.getFullYear() !== new Date().getFullYear());
+  $('today').hidden = readOnly || keyOf(shown) === keyOf(weekStart(new Date()));
+  const card = $('card');
+  card.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(shown, i);
+    const k = keyOf(d);
+    const entry = data.days[k] || {};
+    const el = document.createElement('div');
+    el.className = 'day' + (d.getDay() % 6 === 0 ? ' weekend' : '') + (k === todayKey && !readOnly ? ' is-today' : '');
+    el.innerHTML = `
+      <div class="day-label"><b>${DAY_NAMES[d.getDay()]}</b><span>${MONTHS[d.getMonth()]} ${d.getDate()}</span></div>
+      <input class="hours" inputmode="decimal" placeholder="0" aria-label="Hours on ${DAY_NAMES[d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()}">
+      <div class="meter"><i></i></div>
+      <textarea class="note" rows="1" placeholder="${readOnly ? '' : 'Note'}" aria-label="Note for ${DAY_NAMES[d.getDay()]}"></textarea>`;
+    const hours = el.querySelector('.hours');
+    const note = el.querySelector('.note');
+    const bar = el.querySelector('.meter i');
+    hours.value = entry.hours ? fmtHours(entry.hours) : '';
+    note.value = entry.note || '';
+    const fit = () => { note.style.height = 'auto'; note.style.height = note.scrollHeight + 'px'; };
+    bar.style.width = Math.min(100, ((entry.hours || 0) / FULL_DAY) * 100) + '%';
+    if (readOnly) {
+      hours.readOnly = note.readOnly = true;
+    } else {
+      hours.addEventListener('input', () => {
+        const h = parseHours(hours.value);
+        hours.classList.toggle('bad', h === null);
+        if (h === null) return;
+        setDay(k, { hours: h });
+        bar.style.width = Math.min(100, (h / FULL_DAY) * 100) + '%';
+      });
+      hours.addEventListener('blur', () => {
+        const h = (data.days[k] || {}).hours || 0;
+        hours.value = h ? fmtHours(h) : '';
+        hours.classList.remove('bad');
+      });
+      note.addEventListener('input', () => { fit(); setDay(k, { note: note.value }); });
+      for (const input of [hours, note]) {
+        input.addEventListener('keydown', e => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          const all = [...card.querySelectorAll(input === hours ? '.hours' : '.note')];
+          const next = all[all.indexOf(input) + 1];
+          next ? next.focus() : input.blur();
+        });
+      }
+    }
+    card.appendChild(el);
+    fit();
+  }
+  renderTotals();
+}
+
+function setDay(k, patch) {
+  const entry = { hours: 0, note: '', ...data.days[k], ...patch };
+  if (!entry.hours && !entry.note.trim()) delete data.days[k];
+  else data.days[k] = entry;
+  save();
+  renderTotals();
+}
+
+function renderTotals() {
+  let total = 0;
+  for (let i = 0; i < 7; i++) total += (data.days[keyOf(addDays(shown, i))] || {}).hours || 0;
+  $('week-total').textContent = fmtHours(total);
+
+  const list = $('weeks');
+  list.innerHTML = '';
+  const weeks = weeksWithData();
+  if (!weeks.length) {
+    list.innerHTML = '<li class="empty">No hours yet. Type today\'s hours above to start.</li>';
+    return;
+  }
+  let grand = 0;
+  for (const [ws, hrs] of weeks) {
+    grand += hrs;
+    const start = fromKey(ws);
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'row' + (ws === keyOf(shown) ? ' current' : '');
+    const bars = [...Array(7)].map((_, i) => {
+      const h = (data.days[keyOf(addDays(start, i))] || {}).hours || 0;
+      return `<i style="height:${Math.max(2, Math.min(22, (h / 10) * 22))}px"></i>`;
+    }).join('');
+    btn.innerHTML = `<span class="row-range">${rangeLabel(start, true)}</span><span class="bars" aria-hidden="true">${bars}</span><span class="row-total">${fmtHours(hrs)} h</span>`;
+    btn.addEventListener('click', () => { shown = start; renderWeek(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    li.appendChild(btn);
+    list.appendChild(li);
+  }
+  const g = document.createElement('li');
+  g.className = 'grand';
+  g.innerHTML = `<span>Total, all weeks</span><span>${fmtHours(grand)} h</span>`;
+  list.appendChild(g);
+}
+
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function fileBase() {
+  const who = (data.name || '').trim();
+  return (who ? who.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-') + '-' : '') + 'hours-' + todayKey;
+}
+function download(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------- Shareable copy: this same page, read-only, with the hours baked in ----------
+function saveShareableCopy() {
+  const payload = JSON.stringify({ data, savedOn: todayKey }).replace(/</g, '\\u003c');
+  const html = PAGE_SOURCE
+    .replace(/<link [^>]*data-app[^>]*>\n?/g, '') // the copy is a plain file, not the installable app
+    .replace('<!--' + 'SNAPSHOT-->', `<script>window.HOURS_SNAPSHOT = ${payload};<\/script>`);
+  download(new Blob([html], { type: 'text/html' }), fileBase() + '.html');
+  toast('Shareable copy saved. Send the .html file.');
+}
+
+// ---------- Excel export (.xlsx built by hand, no libraries) ----------
+function exportExcel() {
+  const weeks = weeksWithData().slice().reverse(); // oldest first
+  if (!weeks.length) { toast('Log some hours first, then export.'); return; }
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const serial = d => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 86400000);
+  const col = i => 'ABCDEFGH'[i];
+  // Cell helpers. Styles: 0 normal, 1 bold, 2 date, 3 hours, 4 bold hours, 5 title, 6 week heading, 7 header row
+  const str = (r, c, v, s = 0) => `<c r="${col(c)}${r}" t="inlineStr" s="${s}"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+  const num = (r, c, v, s = 3) => `<c r="${col(c)}${r}" s="${s}"><v>${v}</v></c>`;
+  const sum = (r, c, from, to, v) => `<c r="${col(c)}${r}" s="4"><f>SUM(${col(c)}${from}:${col(c)}${to})</f><v>${v}</v></c>`;
+  const row = (r, cells) => `<row r="${r}">${cells.join('')}</row>`;
+  const who = (data.name || '').trim();
+
+  // Sheet 1: every week, day by day
+  let r = 1, rows = [], weekTotalCells = [], grand = 0;
+  rows.push(row(r++, [str(1, 0, (who ? who + ', ' : '') + 'hours by week', 5)]));
+  r++;
+  for (const [ws] of weeks) {
+    const start = fromKey(ws);
+    rows.push(row(r, [str(r, 0, 'Week of ' + rangeLabel(start, true), 6)])); r++;
+    rows.push(row(r, [str(r, 0, 'Date', 7), str(r, 1, 'Hours', 7), str(r, 2, 'Note', 7)])); r++;
+    const first = r;
+    let total = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(start, i);
+      const e = data.days[keyOf(d)];
+      if (!e) continue;
+      total += e.hours || 0;
+      rows.push(row(r, [num(r, 0, serial(d), 2), num(r, 1, e.hours || 0), e.note ? str(r, 2, e.note) : ''])); r++;
+    }
+    rows.push(row(r, [str(r, 0, 'Week total', 1), sum(r, 1, first, r - 1, total)]));
+    weekTotalCells.push('B' + r);
+    grand += total;
+    r += 2;
+  }
+  rows.push(row(r, [str(r, 0, 'Total, all weeks', 1), `<c r="B${r}" s="4"><f>${weekTotalCells.join('+')}</f><v>${grand}</v></c>`]));
+  const sheet1 = sheetXml(rows, [16, 10, 60]);
+
+  // Sheet 2: one line per week
+  r = 1; rows = [];
+  rows.push(row(r, [str(r, 0, 'Week starting', 7), str(r, 1, 'Week ending', 7), str(r, 2, 'Hours', 7)])); r++;
+  for (const [ws, hrs] of weeks) {
+    const start = fromKey(ws);
+    rows.push(row(r, [num(r, 0, serial(start), 2), num(r, 1, serial(addDays(start, 6)), 2), num(r, 2, hrs)])); r++;
+  }
+  rows.push(row(r, [str(r, 0, 'Total', 1), sum(r, 2, 2, r - 1, grand)]));
+  const sheet2 = sheetXml(rows, [16, 16, 10]);
+
+  const files = {
+    '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="All weeks" sheetId="1" r:id="rId1"/><sheet name="Weekly totals" sheetId="2" r:id="rId2"/></sheets><calcPr fullCalcOnLoad="1"/></workbook>`,
+    'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+    'xl/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="ddd, mmm d, yyyy"/></numFmts><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF4636B0"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE9E6F7"/></patternFill></fill></fills><borders count="2"><border/><border><top style="thin"><color rgb="FF1B2130"/></top></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="8"><xf/><xf fontId="1" borderId="1" applyFont="1" applyBorder="1"/><xf numFmtId="164" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="left"/></xf><xf/><xf fontId="1" borderId="1" applyFont="1" applyBorder="1"/><xf fontId="2" applyFont="1"/><xf fontId="3" applyFont="1"/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
+    'xl/worksheets/sheet1.xml': sheet1,
+    'xl/worksheets/sheet2.xml': sheet2,
+  };
+  download(new Blob([zip(files)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fileBase() + '.xlsx');
+  toast('Excel file saved.');
+}
+
+function sheetXml(rows, widths) {
+  const cols = widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${cols}</cols><sheetData>${rows.join('')}</sheetData></worksheet>`;
+}
+
+// Minimal ZIP writer (files stored uncompressed, which Excel accepts).
+const CRC_TABLE = [...Array(256)].map((_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (const b of bytes) c = CRC_TABLE[(c ^ b) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zip(files) {
+  const enc = new TextEncoder();
+  const parts = [], central = [];
+  let offset = 0;
+  for (const [name, text] of Object.entries(files)) {
+    const nameBytes = enc.encode(name), body = enc.encode(text), crc = crc32(body);
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true);
+    local.setUint32(14, crc, true); local.setUint32(18, body.length, true); local.setUint32(22, body.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    parts.push(local, nameBytes, body);
+    const cen = new DataView(new ArrayBuffer(46));
+    cen.setUint32(0, 0x02014b50, true); cen.setUint16(4, 20, true); cen.setUint16(6, 20, true);
+    cen.setUint32(16, crc, true); cen.setUint32(20, body.length, true); cen.setUint32(24, body.length, true);
+    cen.setUint16(28, nameBytes.length, true); cen.setUint32(42, offset, true);
+    central.push(cen, nameBytes);
+    offset += 30 + nameBytes.length + body.length;
+  }
+  const cenSize = central.reduce((s, p) => s + p.byteLength, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, Object.keys(files).length, true); end.setUint16(10, Object.keys(files).length, true);
+  end.setUint32(12, cenSize, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end]);
+}
+
+// ---------- Wire up ----------
+$('name').value = data.name || '';
+$('name').addEventListener('input', e => { data.name = e.target.value; save(); document.title = titleText(); });
+const titleText = () => (data.name ? data.name + ', hours' : 'Hours');
+document.title = titleText();
+$('prev').addEventListener('click', () => { shown = addDays(shown, -7); renderWeek(); });
+$('next').addEventListener('click', () => { shown = addDays(shown, 7); renderWeek(); });
+$('today').addEventListener('click', () => { shown = weekStart(new Date()); renderWeek(); });
+$('export').addEventListener('click', exportExcel);
+$('share').addEventListener('click', saveShareableCopy);
+
+if (readOnly) {
+  $('name').readOnly = true;
+  $('name').placeholder = '';
+  $('share').hidden = true;
+  $('hint').hidden = true;
+  const saved = fromKey(snapshot.savedOn);
+  $('readonly-note').textContent = `Read-only copy, saved ${MONTHS[saved.getMonth()]} ${saved.getDate()}, ${saved.getFullYear()}. Click any week below to see its days.`;
+  $('readonly-note').hidden = false;
+}
+renderWeek();
+
+// Installed app: work offline, and ask the browser not to clear saved hours when space runs low.
+if (!readOnly && location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+}
+</script>
+</body>
+</html>
